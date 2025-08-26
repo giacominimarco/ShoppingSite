@@ -1,0 +1,226 @@
+### Sales API Examples
+
+# Base URL
+@baseUrl = https://localhost:7001
+
+### 1. Create Sale - No Discount (1-3 items)
+POST {{baseUrl}}/api/sales
+Content-Type: application/json
+
+{
+  "customer": "John Doe",
+  "branch": "Downtown Store",
+  "items": [
+    {
+      "product": "Beer - Premium Lager",
+      "quantity": 3,
+      "unitPrice": 10.50
+    }
+  ]
+}
+
+### 2. Create Sale - 10% Discount (4-9 items)
+POST {{baseUrl}}/api/sales
+Content-Type: application/json
+
+{
+  "customer": "Jane Smith",
+  "branch": "Uptown Store",
+  "items": [
+    {
+      "product": "Wine - Red Blend",
+      "quantity": 5,
+      "unitPrice": 25.00
+    },
+    {
+      "product": "Spirits - Vodka",
+      "quantity": 2,
+      "unitPrice": 35.00
+    }
+  ]
+}
+
+### 3. Create Sale - 20% Discount (10-20 items)
+POST {{baseUrl}}/api/sales
+Content-Type: application/json
+
+{
+  "customer": "Bob Johnson",
+  "branch": "Mall Store",
+  "items": [
+    {
+      "product": "Beer - Craft IPA",
+      "quantity": 12,
+      "unitPrice": 8.50
+    },
+    {
+      "product": "Wine - White Chardonnay",
+      "quantity": 15,
+      "unitPrice": 22.00
+    }
+  ]
+}
+
+### 4. Create Sale - Multiple Items with Different Discounts
+POST {{baseUrl}}/api/sales
+Content-Type: application/json
+
+{
+  "customer": "Alice Brown",
+  "branch": "Airport Store",
+  "items": [
+    {
+      "product": "Beer - Light Lager",
+      "quantity": 2,
+      "unitPrice": 9.00
+    },
+    {
+      "product": "Wine - Sparkling",
+      "quantity": 8,
+      "unitPrice": 30.00
+    },
+    {
+      "product": "Spirits - Whiskey",
+      "quantity": 18,
+      "unitPrice": 45.00
+    }
+  ]
+}
+
+### 5. Get Sale by ID
+# Replace {sale-id} with the actual sale ID from the create response
+GET {{baseUrl}}/api/sales/{sale-id}
+
+### 6. Get Sales List - Basic
+GET {{baseUrl}}/api/sales
+
+### 7. Get Sales List - With Pagination
+GET {{baseUrl}}/api/sales?_page=1&_size=5
+
+### 8. Get Sales List - Filtered by Customer
+GET {{baseUrl}}/api/sales?customer=John*
+
+### 9. Get Sales List - Filtered by Branch
+GET {{baseUrl}}/api/sales?branch=Downtown*
+
+### 10. Get Sales List - Filtered by Date Range
+GET {{baseUrl}}/api/sales?_minDate=2024-01-01&_maxDate=2024-12-31
+
+### 11. Get Sales List - Filtered by Total Amount
+GET {{baseUrl}}/api/sales?_minTotalAmount=100&_maxTotalAmount=500
+
+### 12. Get Sales List - Ordered by Sale Date (Descending)
+GET {{baseUrl}}/api/sales?_order="SaleDate desc"
+
+### 13. Get Sales List - Ordered by Total Amount (Ascending)
+GET {{baseUrl}}/api/sales?_order="TotalAmount asc"
+
+### 14. Get Sales List - Complex Filtering and Ordering
+GET {{baseUrl}}/api/sales?_page=1&_size=10&customer=John*&_minDate=2024-01-01&_order="SaleDate desc, TotalAmount asc"
+
+### 15. Cancel Sale
+# Replace {sale-id} with the actual sale ID
+POST {{baseUrl}}/api/sales/{sale-id}/cancel
+
+### 16. Test Business Rule - Quantity Above 20 (Should Fail)
+POST {{baseUrl}}/api/sales
+Content-Type: application/json
+
+{
+  "customer": "Test Customer",
+  "branch": "Test Store",
+  "items": [
+    {
+      "product": "Test Product",
+      "quantity": 21,
+      "unitPrice": 10.00
+    }
+  ]
+}
+
+### 17. Test Validation - Empty Customer (Should Fail)
+POST {{baseUrl}}/api/sales
+Content-Type: application/json
+
+{
+  "customer": "",
+  "branch": "Test Store",
+  "items": [
+    {
+      "product": "Test Product",
+      "quantity": 5,
+      "unitPrice": 10.00
+    }
+  ]
+}
+
+### 18. Test Validation - Empty Items (Should Fail)
+POST {{baseUrl}}/api/sales
+Content-Type: application/json
+
+{
+  "customer": "Test Customer",
+  "branch": "Test Store",
+  "items": []
+}
+
+### 19. Test Validation - Invalid Quantity (Should Fail)
+POST {{baseUrl}}/api/sales
+Content-Type: application/json
+
+{
+  "customer": "Test Customer",
+  "branch": "Test Store",
+  "items": [
+    {
+      "product": "Test Product",
+      "quantity": 0,
+      "unitPrice": 10.00
+    }
+  ]
+}
+
+### 20. Test Validation - Invalid Unit Price (Should Fail)
+POST {{baseUrl}}/api/sales
+Content-Type: application/json
+
+{
+  "customer": "Test Customer",
+  "branch": "Test Store",
+  "items": [
+    {
+      "product": "Test Product",
+      "quantity": 5,
+      "unitPrice": -10.00
+    }
+  ]
+}
+
+### 21. Test Get Non-Existent Sale (Should Return 404)
+GET {{baseUrl}}/api/sales/123e4567-e89b-12d3-a456-426614174999
+
+### 22. Test Cancel Non-Existent Sale (Should Return 404)
+POST {{baseUrl}}/api/sales/123e4567-e89b-12d3-a456-426614174999/cancel
+
+### 23. Test Cancel Already Cancelled Sale (Should Return Error)
+# First create a sale, then cancel it twice
+POST {{baseUrl}}/api/sales
+Content-Type: application/json
+
+{
+  "customer": "Test Customer",
+  "branch": "Test Store",
+  "items": [
+    {
+      "product": "Test Product",
+      "quantity": 5,
+      "unitPrice": 10.00
+    }
+  ]
+}
+
+# Use the sale ID from the response above
+POST {{baseUrl}}/api/sales/{sale-id}/cancel
+
+# Try to cancel the same sale again
+POST {{baseUrl}}/api/sales/{sale-id}/cancel
