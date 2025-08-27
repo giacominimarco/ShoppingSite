@@ -79,6 +79,15 @@ This section includes links to the detailed documentation for the different API 
 - [Users API](/.doc/users-api.md)
 - [Auth API](/.doc/auth-api.md)
 
+## Frontend React
+O projeto inclui um frontend React completo para consumir as APIs desenvolvidas:
+- [Frontend React](template/frontend/README.md) - Documentação completa do frontend
+- Interface moderna e responsiva
+- Formulários dinâmicos para criação de vendas
+- Listagem com filtros e paginação
+- Visualização detalhada de vendas
+- Implementação das regras de negócio no frontend
+
 ## Project Structure
 This section describes the overall structure and organization of the project files and directories. 
 
