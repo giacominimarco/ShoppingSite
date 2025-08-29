@@ -20,7 +20,7 @@ npm install
 Crie um arquivo `.env` na raiz do projeto frontend:
 
 ```env
-REACT_APP_API_URL=https://localhost:7001/api
+REACT_APP_API_URL=http://localhost:5119/api
 ```
 
 **Nota**: Se o backend estiver rodando em uma porta diferente, ajuste a URL conforme necessário.
