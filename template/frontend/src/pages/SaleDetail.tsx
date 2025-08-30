@@ -1,34 +1,36 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, X, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { ArrowLeft, X } from 'lucide-react';
 import { salesApi } from '../services/api';
 import { Sale } from '../types/api';
 
 const SaleDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const [sale, setSale] = useState<Sale | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const loadSale = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('Loading sale with ID:', id);
+      const response = await salesApi.getSale(id!);
+      console.log('API response:', response);
+      setSale(response.data);
+    } catch (err: any) {
+      console.error('Error loading sale:', err);
+      setError(err.message || 'Erro ao carregar venda');
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
   useEffect(() => {
     if (id) {
       loadSale();
     }
-  }, [id]);
-
-  const loadSale = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await salesApi.getSale(id!);
-      setSale(response.data);
-    } catch (err: any) {
-      setError(err.message || 'Erro ao carregar venda');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [id, loadSale]);
 
   const handleCancelSale = async () => {
     if (!sale || !window.confirm('Tem certeza que deseja cancelar esta venda?')) {

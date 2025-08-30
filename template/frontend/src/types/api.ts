@@ -59,7 +59,7 @@ export interface GetSalesRequest {
 export interface GetSalesResponse {
   success: boolean;
   data: {
-    items: Sale[];
+    sales: Sale[];           // Mudou de "items" para "sales"
     totalCount: number;
     page: number;
     size: number;

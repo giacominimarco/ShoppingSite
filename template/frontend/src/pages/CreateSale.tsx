@@ -28,12 +28,6 @@ const schema = yup.object({
   ).min(1, 'Pelo menos um item é obrigatório'),
 });
 
-interface SaleFormData {
-  customer: string;
-  branch: string;
-  items: CreateSaleItemRequest[];
-}
-
 const CreateSale: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -45,7 +39,6 @@ const CreateSale: React.FC = () => {
     handleSubmit,
     watch,
     formState: { errors },
-    reset,
   } = useForm({
     resolver: yupResolver(schema),
     defaultValues: {
@@ -130,10 +123,12 @@ const CreateSale: React.FC = () => {
       };
 
       const response = await salesApi.createSale(saleData);
+      console.log('Sale created successfully:', response);
       
       alert('Venda criada com sucesso!');
       navigate(`/sales/${response.data.id}`);
     } catch (err: any) {
+      console.error('Error creating sale:', err);
       setError(err.message || 'Erro ao criar venda');
     } finally {
       setLoading(false);
