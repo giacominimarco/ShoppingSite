@@ -21,8 +21,12 @@ public class Program
             Log.Information("Starting web application");
 
             WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+            // ForÃ§ar HTTP
+            builder.WebHost.UseUrls("http://localhost:5119");
+            // Logging
             builder.AddDefaultLogging();
 
+            // Controllers e Swagger
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
 
@@ -30,7 +34,7 @@ public class Program
             builder.AddBasicHealthChecks();
             builder.Services.AddSwaggerGen();
 
-            // Configuração do EF Core
+            // Configuraï¿½ï¿½o do EF Core
             builder.Services.AddDbContext<DefaultContext>(options =>
                 options.UseNpgsql(
                     builder.Configuration.GetConnectionString("DefaultConnection"),
@@ -41,7 +45,7 @@ public class Program
             // JWT Authentication
             builder.Services.AddJwtAuthentication(builder.Configuration);
 
-            // Registro de dependências
+            // Registro de dependï¿½ncias
             builder.RegisterDependencies();
 
             // AutoMapper
@@ -56,40 +60,36 @@ public class Program
                 );
             });
 
-            // Pipeline de validação
+            // Pipeline de validaÃ§Ã£o
             builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
-            // Configuração de CORS para permitir chamadas do frontend React
+            // CORS para React Dev Server
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowFrontendDev", policy =>
                 {
                     policy.WithOrigins("http://localhost:3000")
                           .AllowAnyHeader()
-                          .AllowAnyMethod();
+                          .AllowAnyMethod()
+                          .AllowCredentials();
                 });
             });
 
             var app = builder.Build();
 
-            // Middleware de validação
+            // Middleware de validaÃ§Ã£o
             app.UseMiddleware<ValidationExceptionMiddleware>();
 
+            app.UseCors("AllowFrontendDev");
+            app.UseAuthentication();
+            app.UseAuthorization();
+            app.UseBasicHealthChecks();
+            
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-
-            // Ativa CORS antes de autenticação e autorização
-            app.UseCors("AllowFrontendDev");
-
-            app.UseHttpsRedirection();
-
-            app.UseAuthentication();
-            app.UseAuthorization();
-
-            app.UseBasicHealthChecks();
 
             app.MapControllers();
 
