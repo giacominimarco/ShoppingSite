@@ -14,6 +14,20 @@ public class CancelSaleCommand : IRequest<CancelSaleResult>
     public Guid Id { get; set; }
 
     /// <summary>
+    /// Initializes a new instance of the CancelSaleCommand class.
+    /// </summary>
+    public CancelSaleCommand() { }
+
+    /// <summary>
+    /// Initializes a new instance of the CancelSaleCommand class with an ID.
+    /// </summary>
+    /// <param name="id">The sale ID</param>
+    public CancelSaleCommand(Guid id)
+    {
+        Id = id;
+    }
+
+    /// <summary>
     /// Performs validation of the command.
     /// </summary>
     /// <returns>A validation result</returns>

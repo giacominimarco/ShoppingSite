@@ -13,6 +13,8 @@ public class GetSaleProfile : Profile
     /// </summary>
     public GetSaleProfile()
     {
+        CreateMap<Guid, GetSaleCommand>()
+            .ConstructUsing(id => new GetSaleCommand(id));
         CreateMap<GetSaleRequest, GetSaleCommand>()
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id));
         CreateMap<GetSaleResult, GetSaleResponse>();

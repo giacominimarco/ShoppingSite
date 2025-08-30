@@ -14,6 +14,20 @@ public class GetSaleCommand : IRequest<GetSaleResult>
     public Guid Id { get; set; }
 
     /// <summary>
+    /// Initializes a new instance of the GetSaleCommand class.
+    /// </summary>
+    public GetSaleCommand() { }
+
+    /// <summary>
+    /// Initializes a new instance of the GetSaleCommand class with an ID.
+    /// </summary>
+    /// <param name="id">The sale ID</param>
+    public GetSaleCommand(Guid id)
+    {
+        Id = id;
+    }
+
+    /// <summary>
     /// Performs validation of the command.
     /// </summary>
     /// <returns>A validation result</returns>
