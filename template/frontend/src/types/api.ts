@@ -52,8 +52,11 @@ export interface GetSalesRequest {
   customer?: string;
   branch?: string;
   status?: string;
-  startDate?: string;
-  endDate?: string;
+  minDate?: string;
+  maxDate?: string;
+  minTotalAmount?: number;
+  maxTotalAmount?: number;
+  orderBy?: string;
 }
 
 export interface GetSalesResponse {

@@ -17,7 +17,17 @@ const SaleDetail: React.FC = () => {
       console.log('Loading sale with ID:', id);
       const response = await salesApi.getSale(id!);
       console.log('API response:', response);
-      setSale(response);
+      
+      // A API retorna {data: {...}}, mas o tipo Sale não tem essa propriedade
+      // Vamos verificar se a resposta tem a estrutura esperada
+      if (response && typeof response === 'object') {
+        // Se a resposta tem a propriedade 'data', use-a; caso contrário, use a resposta diretamente
+        const saleData = (response as any).data || response;
+        setSale(saleData);
+      } else {
+        console.error('❌ Resposta da API inválida:', response);
+        setError('Resposta da API inválida');
+      }
     } catch (err: any) {
       console.error('Error loading sale:', err);
       setError(err.message || 'Erro ao carregar venda');
@@ -190,7 +200,7 @@ const SaleDetail: React.FC = () => {
           <dl className="space-y-3">
             <div>
               <dt className="text-sm font-medium text-gray-500">Total de Itens</dt>
-              <dd className="text-sm text-gray-900">{sale.items.length}</dd>
+              <dd className="text-sm text-gray-900">{sale.items?.length || 0}</dd>
             </div>
             <div>
               <dt className="text-sm font-medium text-gray-500">Valor Total</dt>
@@ -235,25 +245,33 @@ const SaleDetail: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {sale.items.map((item) => (
-                <tr key={item.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {item.product}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.quantity}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatCurrency(item.unitPrice)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.discount > 0 ? formatCurrency(item.discount) : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {formatCurrency(item.totalAmount)}
+              {sale.items && sale.items.length > 0 ? (
+                sale.items.map((item) => (
+                  <tr key={item.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {item.product}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {item.quantity}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatCurrency(item.unitPrice)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {item.discount > 0 ? formatCurrency(item.discount) : '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {formatCurrency(item.totalAmount)}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                    Nenhum item encontrado para esta venda
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

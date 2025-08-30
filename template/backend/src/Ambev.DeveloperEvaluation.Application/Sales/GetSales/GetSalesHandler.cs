@@ -38,10 +38,21 @@ public class GetSalesHandler : IRequestHandler<GetSalesCommand, GetSalesResult>
         if (!validationResult.IsValid)
             throw new ValidationException(validationResult.Errors);
 
-        // For now, we'll use a simple implementation
-        // In a real implementation, the repository would support filtering and ordering
-        var sales = await _saleRepository.GetAllAsync(command.Page, command.Size, cancellationToken);
-        var totalCount = await _saleRepository.GetCountAsync(cancellationToken);
+        // Create filters object
+        var filters = new SaleFilters
+        {
+            Customer = command.Customer,
+            Branch = command.Branch,
+            Status = command.Status,
+            MinDate = command.MinDate,
+            MaxDate = command.MaxDate,
+            MinTotalAmount = command.MinTotalAmount,
+            MaxTotalAmount = command.MaxTotalAmount
+        };
+
+        // Use the new filtered methods
+        var sales = await _saleRepository.GetFilteredAsync(filters, command.Page, command.Size, cancellationToken);
+        var totalCount = await _saleRepository.GetFilteredCountAsync(filters, cancellationToken);
 
         var result = new GetSalesResult
         {

@@ -41,6 +41,24 @@ public interface ISaleRepository
     Task<IEnumerable<Sale>> GetAllAsync(int page = 1, int size = 10, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Retrieves sales with filtering and pagination
+    /// </summary>
+    /// <param name="filters">The filters to apply</param>
+    /// <param name="page">Page number (default: 1)</param>
+    /// <param name="size">Page size (default: 10)</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>A collection of sales matching the filters</returns>
+    Task<IEnumerable<Sale>> GetFilteredAsync(SaleFilters filters, int page = 1, int size = 10, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the total count of sales matching the filters
+    /// </summary>
+    /// <param name="filters">The filters to apply</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The total count of sales matching the filters</returns>
+    Task<int> GetFilteredCountAsync(SaleFilters filters, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Updates an existing sale in the repository
     /// </summary>
     /// <param name="sale">The sale to update</param>
@@ -62,4 +80,45 @@ public interface ISaleRepository
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The total count of sales</returns>
     Task<int> GetCountAsync(CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// Filters for sale queries
+/// </summary>
+public class SaleFilters
+{
+    /// <summary>
+    /// Gets or sets the customer filter
+    /// </summary>
+    public string? Customer { get; set; }
+
+    /// <summary>
+    /// Gets or sets the branch filter
+    /// </summary>
+    public string? Branch { get; set; }
+
+    /// <summary>
+    /// Gets or sets the status filter
+    /// </summary>
+    public string? Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets the minimum date filter
+    /// </summary>
+    public DateTime? MinDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum date filter
+    /// </summary>
+    public DateTime? MaxDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets the minimum total amount filter
+    /// </summary>
+    public decimal? MinTotalAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the maximum total amount filter
+    /// </summary>
+    public decimal? MaxTotalAmount { get; set; }
 }
