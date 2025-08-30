@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingCart, List, Plus, TrendingUp } from 'lucide-react';
+import { List, Plus, TrendingUp } from 'lucide-react';
 
 const Home: React.FC = () => {
   return (

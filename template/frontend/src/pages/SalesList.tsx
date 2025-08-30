@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, X, Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Eye, X, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { salesApi } from '../services/api';
 import { Sale, GetSalesRequest } from '../types/api';
 
@@ -20,12 +20,26 @@ const SalesList: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('🔍 Carregando vendas com filtros:', filters);
+      console.log('🔗 URL da API:', `${process.env.REACT_APP_API_URL || 'http://localhost:5119'}/api/sales`);
+      
       const response = await salesApi.getSales(filters);
-      setSales(response.data.items);
-      setTotalPages(response.data.totalPages);
-      setTotalCount(response.data.totalCount);
+      console.log('📡 Resposta completa da API:', response);
+      console.log('📊 Dados da resposta:', response.data);
+      console.log('🔍 Estrutura completa:', JSON.stringify(response, null, 2));
+      
+      setSales(response.data.sales || []);
+      setTotalPages(response.data.totalPages || 1);
+      setTotalCount(response.data.totalCount || 0);
+      
+      console.log('✅ Vendas carregadas:', response.data.sales?.length || 0);
     } catch (err: any) {
+      console.error('❌ Erro ao carregar vendas:', err);
+      console.error('❌ Detalhes do erro:', err.response?.data || err.message);
       setError(err.message || 'Erro ao carregar vendas');
+      setSales([]);
+      setTotalPages(1);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
@@ -169,7 +183,7 @@ const SalesList: React.FC = () => {
       {/* Sales Table */}
       <div className="mt-8 bg-white shadow overflow-hidden sm:rounded-md">
         <ul className="divide-y divide-gray-200">
-          {sales.map((sale) => (
+          {sales && sales.map((sale) => (
             <li key={sale.id} className="px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
@@ -182,7 +196,7 @@ const SalesList: React.FC = () => {
                         Cliente: {sale.customer} | Filial: {sale.branch}
                       </p>
                       <p className="text-sm text-gray-500">
-                        Data: {formatDate(sale.saleDate)} | {sale.items.length} itens
+                        Data: {formatDate(sale.saleDate)}
                       </p>
                     </div>
                     <div className="text-right">
@@ -256,7 +270,7 @@ const SalesList: React.FC = () => {
         </div>
       )}
 
-      {sales.length === 0 && !loading && (
+      {sales && sales.length === 0 && !loading && (
         <div className="mt-8 text-center py-12">
           <p className="text-gray-500 text-lg">Nenhuma venda encontrada.</p>
         </div>
