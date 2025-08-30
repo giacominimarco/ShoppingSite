@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { List, Plus, TrendingUp } from 'lucide-react';
+import { List, Plus } from 'lucide-react';
 
 const Home: React.FC = () => {
   return (
@@ -17,7 +17,7 @@ const Home: React.FC = () => {
       </div>
 
       {/* Features Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
         <div className="bg-white p-6 rounded-lg shadow-md border">
           <div className="flex items-center mb-4">
             <Plus className="h-8 w-8 text-blue-600 mr-3" />
@@ -48,19 +48,6 @@ const Home: React.FC = () => {
           >
             Ver Vendas
           </Link>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-md border">
-          <div className="flex items-center mb-4">
-            <TrendingUp className="h-8 w-8 text-purple-600 mr-3" />
-            <h3 className="text-lg font-semibold text-gray-900">Relatórios</h3>
-          </div>
-          <p className="text-gray-600 mb-4">
-            Acompanhe o desempenho das vendas com relatórios detalhados e análises.
-          </p>
-          <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700">
-            Ver Relatórios
-          </button>
         </div>
       </div>
 
