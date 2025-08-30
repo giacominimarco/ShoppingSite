@@ -146,11 +146,11 @@ const CreateSale: React.FC = () => {
          })),
        };
 
-      const response = await salesApi.createSale(saleData);
-      console.log('Sale created successfully:', response);
-      
-      alert('Venda criada com sucesso!');
-      navigate(`/sales/${response.data.id}`);
+             const response = await salesApi.createSale(saleData);
+       console.log('Sale created successfully:', response);
+       
+       alert('Venda criada com sucesso!');
+       navigate(`/sales/${response.id}`);
     } catch (err: any) {
       console.error('Error creating sale:', err);
       setError(err.message || 'Erro ao criar venda');

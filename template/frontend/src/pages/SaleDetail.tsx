@@ -17,7 +17,7 @@ const SaleDetail: React.FC = () => {
       console.log('Loading sale with ID:', id);
       const response = await salesApi.getSale(id!);
       console.log('API response:', response);
-      setSale(response.data);
+      setSale(response);
     } catch (err: any) {
       console.error('Error loading sale:', err);
       setError(err.message || 'Erro ao carregar venda');
