@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -16,14 +16,15 @@ const schema = yup.object({
       quantity: yup.number()
         .required('Quantidade é obrigatória')
         .min(1, 'Quantidade deve ser pelo menos 1')
-        .max(19, 'Quantidade máxima permitida é 19'),
+        .max(20, 'Quantidade máxima permitida é 20'),
       unitPrice: yup.number()
         .required('Preço unitário é obrigatório')
         .min(0.01, 'Preço unitário deve ser maior que zero'),
       discount: yup.number()
+        .required('Desconto é obrigatório')
         .min(0, 'Desconto não pode ser negativo')
-        .max(100, 'Desconto máximo é 100%')
-        .optional(),
+        .max(20, 'Desconto máximo permitido é 20%')
+        .integer('Desconto deve ser um número inteiro'),
     })
   ).min(1, 'Pelo menos um item é obrigatório'),
 });
@@ -38,14 +39,15 @@ const CreateSale: React.FC = () => {
     control,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm({
     resolver: yupResolver(schema),
-    defaultValues: {
-      customer: '',
-      branch: '',
-      items: [{ product: '', quantity: 1, unitPrice: 0, discount: 0 }],
-    },
+          defaultValues: {
+        customer: '',
+        branch: '',
+        items: [{ product: '', quantity: 1, unitPrice: 0, discount: 0 }],
+      },
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -54,6 +56,19 @@ const CreateSale: React.FC = () => {
   });
 
   const watchedItems = watch('items');
+
+  // Atualizar desconto automaticamente quando a quantidade mudar
+  useEffect(() => {
+    watchedItems?.forEach((item, index) => {
+      if (item && item.quantity) {
+        const autoDiscount = calculateAutomaticDiscount(item.quantity);
+        // Só atualiza se o usuário não alterou manualmente o desconto
+        if (item.discount === undefined || item.discount === null) {
+          setValue(`items.${index}.discount`, autoDiscount);
+        }
+      }
+    });
+  }, [watchedItems, setValue]);
 
   const calculateItemTotal = (item: CreateSaleItemRequest) => {
     const quantity = item.quantity || 0;
@@ -76,10 +91,24 @@ const CreateSale: React.FC = () => {
       return { text: 'Sem desconto', color: 'text-gray-500' };
     } else if (quantity >= 4 && quantity <= 9) {
       return { text: '10% de desconto', color: 'text-green-600' };
-    } else if (quantity >= 10 && quantity <= 19) {
+    } else if (quantity >= 10 && quantity <= 20) {
       return { text: '20% de desconto', color: 'text-blue-600' };
+    } else if (quantity > 20) {
+      return { text: 'Quantidade não permitida (máx: 20)', color: 'text-red-600' };
     } else {
-      return { text: 'Quantidade não permitida', color: 'text-red-600' };
+      return { text: 'Quantidade inválida', color: 'text-red-600' };
+    }
+  };
+
+  const calculateAutomaticDiscount = (quantity: number) => {
+    if (quantity >= 1 && quantity <= 3) {
+      return 0; // Sem desconto
+    } else if (quantity >= 4 && quantity <= 9) {
+      return 10; // 10% de desconto
+    } else if (quantity >= 10 && quantity <= 20) {
+      return 20; // 20% de desconto
+    } else {
+      return 0; // Quantidade inválida
     }
   };
 
@@ -88,39 +117,34 @@ const CreateSale: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      // Validate quantity limits
-      const invalidItems = data.items.filter((item: any) => item.quantity > 19);
-      if (invalidItems.length > 0) {
-        setError('Quantidade máxima permitida por item é 19');
-        return;
-      }
+             // Validate quantity limits
+       const invalidItems = data.items.filter((item: any) => item.quantity > 20);
+       if (invalidItems.length > 0) {
+         setError('Quantidade máxima permitida por item é 20');
+         return;
+       }
 
-      // Validate discount rules
-      const invalidDiscounts = data.items.filter((item: any) => {
-        const quantity = item.quantity || 0;
-        const discount = item.discount || 0;
-        
-        if (quantity >= 1 && quantity <= 3 && discount > 0) {
-          return true;
-        }
-        return false;
-      });
+       // Validate discount limits
+       const invalidDiscountItems = data.items.filter((item: any) => 
+         item.discount < 0 || item.discount > 20 || !Number.isInteger(item.discount)
+       );
+       if (invalidDiscountItems.length > 0) {
+         setError('Desconto deve ser um número inteiro entre 0% e 20%');
+         return;
+       }
 
-      if (invalidDiscounts.length > 0) {
-        setError('Descontos manuais não são permitidos para quantidades de 1-3 itens');
-        return;
-      }
 
-      const saleData: CreateSaleRequest = {
-        customer: data.customer,
-        branch: data.branch,
-        items: data.items.map((item: any) => ({
-          product: item.product,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          discount: item.discount || 0,
-        })),
-      };
+
+             const saleData: CreateSaleRequest = {
+         customer: data.customer,
+         branch: data.branch,
+         items: data.items.map((item: any) => ({
+           product: item.product,
+           quantity: item.quantity,
+           unitPrice: item.unitPrice,
+           discount: item.discount,
+         })),
+       };
 
       const response = await salesApi.createSale(saleData);
       console.log('Sale created successfully:', response);
@@ -223,7 +247,7 @@ const CreateSale: React.FC = () => {
           {fields.map((field, index) => {
             const item = watchedItems?.[index];
             const discountInfo = getDiscountInfo(item?.quantity || 0);
-            const itemTotal = calculateItemTotal(item || { product: '', quantity: 0, unitPrice: 0, discount: 0 });
+                         const itemTotal = calculateItemTotal(item || { product: '', quantity: 0, unitPrice: 0, discount: 0 });
 
             return (
               <div key={field.id} className="border border-gray-200 rounded-lg p-4 mb-4">
@@ -270,7 +294,7 @@ const CreateSale: React.FC = () => {
                         errors.items?.[index]?.quantity ? 'border-red-300' : 'border-gray-300'
                       }`}
                       min="1"
-                      max="19"
+                      max="20"
                     />
                     {errors.items?.[index]?.quantity && (
                       <p className="mt-1 text-sm text-red-600">{errors.items[index]?.quantity?.message}</p>
@@ -298,24 +322,56 @@ const CreateSale: React.FC = () => {
                     )}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Desconto (%)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      {...register(`items.${index}.discount`, { valueAsNumber: true })}
-                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                        errors.items?.[index]?.discount ? 'border-red-300' : 'border-gray-300'
-                      }`}
-                      min="0"
-                      max="100"
-                    />
-                    {errors.items?.[index]?.discount && (
-                      <p className="mt-1 text-sm text-red-600">{errors.items[index]?.discount?.message}</p>
-                    )}
-                  </div>
+                                     <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                       Desconto (%)
+                     </label>
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               <input
+                              {...register(`items.${index}.discount`, { 
+                                valueAsNumber: true,
+                                onChange: (e) => {
+                                  const value = parseInt(e.target.value) || 0;
+                                  // Limitar o valor a 20
+                                  if (value > 20) {
+                                    e.target.value = '20';
+                                    setValue(`items.${index}.discount`, 20);
+                                  } else {
+                                    setValue(`items.${index}.discount`, value);
+                                  }
+                                }
+                              })}
+                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                errors.items?.[index]?.discount ? 'border-red-300' : 'border-gray-300'
+                              }`}
+                              type="number"
+                              step="1"
+                              min="0"
+                              max="20"
+                            placeholder="0"
+                            defaultValue={calculateAutomaticDiscount(item?.quantity || 0)}
+                            onKeyDown={(e) => {
+                              // Permitir apenas números, backspace, delete, setas
+                              if (!/[\d]/.test(e.key) && 
+                                  !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                                e.preventDefault();
+                              }
+                            }}
+                            onBlur={(e) => {
+                              // Validação adicional quando o campo perde o foco
+                              const value = parseInt(e.target.value) || 0;
+                              if (value > 20) {
+                                e.target.value = '20';
+                                setValue(`items.${index}.discount`, 20);
+                              }
+                            }}
+                          />
+                     {errors.items?.[index]?.discount && (
+                       <p className="mt-1 text-sm text-red-600">{errors.items[index]?.discount?.message}</p>
+                     )}
+                     <p className="mt-1 text-xs text-gray-500">
+                       Desconto de 0% a 20% (números inteiros)
+                     </p>
+                   </div>
                 </div>
 
                 <div className="mt-4 p-3 bg-gray-50 rounded-md">
