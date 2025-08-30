@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye, X, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 import { salesApi } from '../services/api';
@@ -8,31 +8,53 @@ const SalesList: React.FC = () => {
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
-  const [filters, setFilters] = useState<GetSalesRequest>({
+  
+  // Estado local para os filtros (atualização imediata na UI)
+  const [localFilters, setLocalFilters] = useState<GetSalesRequest>({
+    page: 1,
+    size: 10,
+  });
+  
+  // Estado para os filtros de busca (usado para fazer a requisição)
+  const [searchFilters, setSearchFilters] = useState<GetSalesRequest>({
     page: 1,
     size: 10,
   });
 
-  const loadSales = async () => {
+  // Ref para o timeout do debounce
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+
+  const loadSales = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔍 Carregando vendas com filtros:', filters);
+      console.log('🔍 Carregando vendas com filtros:', searchFilters);
       console.log('🔗 URL da API:', `${process.env.REACT_APP_API_URL || 'http://localhost:5119'}/api/sales`);
       
-      const response = await salesApi.getSales(filters);
+      const response = await salesApi.getSales(searchFilters);
       console.log('📡 Resposta completa da API:', response);
       console.log('📊 Dados da resposta:', response);
       console.log('🔍 Estrutura completa:', JSON.stringify(response, null, 2));
       
-      setSales(response.sales || []);
-      setTotalPages(response.totalPages || 1);
-      setTotalCount(response.totalCount || 0);
-      
-      console.log('✅ Vendas carregadas:', response.sales?.length || 0);
+      // A API retorna {data: {...}}, mas o tipo GetSalesResponse não tem essa propriedade
+      // Vamos verificar se a resposta tem a estrutura esperada
+      if (response && typeof response === 'object') {
+        // Se a resposta tem a propriedade 'data', use-a; caso contrário, use a resposta diretamente
+        const salesData = (response as any).data || response;
+        setSales(salesData.sales || []);
+        setTotalPages(salesData.totalPages || 1);
+        setTotalCount(salesData.totalCount || 0);
+        
+        console.log('✅ Vendas carregadas:', salesData.sales?.length || 0);
+      } else {
+        console.error('❌ Resposta da API inválida:', response);
+        setError('Resposta da API inválida');
+        setSales([]);
+        setTotalPages(1);
+        setTotalCount(0);
+      }
     } catch (err: any) {
       console.error('❌ Erro ao carregar vendas:', err);
       console.error('❌ Detalhes do erro:', err.response?.data || err.message);
@@ -43,22 +65,53 @@ const SalesList: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchFilters]);
 
   useEffect(() => {
     loadSales();
-  }, [filters]);
+  }, [loadSales]);
 
+  // Função para aplicar filtros imediatamente (para campos que não precisam de debounce)
   const handleFilterChange = (key: keyof GetSalesRequest, value: string | number) => {
-    setFilters(prev => ({
-      ...prev,
+    const newFilters = {
+      ...localFilters,
       [key]: value,
       page: 1, // Reset to first page when filtering
+    };
+    
+    setLocalFilters(newFilters);
+    setSearchFilters(newFilters); // Aplicar imediatamente
+  };
+
+  // Função para campos de valor com debounce
+  const handleAmountFilterChange = (key: 'minTotalAmount' | 'maxTotalAmount', value: string) => {
+    const numericValue = value ? parseFloat(value) : undefined;
+    
+    // Atualizar o estado local imediatamente para feedback visual
+    setLocalFilters(prev => ({
+      ...prev,
+      [key]: numericValue,
     }));
+
+    // Cancelar timeout anterior se existir
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+
+    // Criar novo timeout para aplicar o filtro de busca
+    debounceTimeoutRef.current = setTimeout(() => {
+      setSearchFilters(prev => ({
+        ...prev,
+        [key]: numericValue,
+        page: 1, // Reset to first page when filtering
+      }));
+    }, 500);
   };
 
   const handlePageChange = (page: number) => {
-    setFilters(prev => ({ ...prev, page }));
+    const newFilters = { ...searchFilters, page };
+    setLocalFilters(newFilters);
+    setSearchFilters(newFilters);
   };
 
   const handleCancelSale = async (saleId: string) => {
@@ -82,6 +135,15 @@ const SalesList: React.FC = () => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR');
   };
+
+  // Cleanup do timeout quando o componente for desmontado
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -116,14 +178,14 @@ const SalesList: React.FC = () => {
           <Filter className="h-5 w-5 text-gray-400 mr-2" />
           <h3 className="text-lg font-medium text-gray-900">Filtros</h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Cliente
             </label>
             <input
               type="text"
-              value={filters.customer || ''}
+              value={localFilters.customer || ''}
               onChange={(e) => handleFilterChange('customer', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Nome do cliente"
@@ -135,7 +197,7 @@ const SalesList: React.FC = () => {
             </label>
             <input
               type="text"
-              value={filters.branch || ''}
+              value={localFilters.branch || ''}
               onChange={(e) => handleFilterChange('branch', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Nome da filial"
@@ -146,7 +208,7 @@ const SalesList: React.FC = () => {
               Status
             </label>
             <select
-              value={filters.status || ''}
+              value={localFilters.status || ''}
               onChange={(e) => handleFilterChange('status', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -157,10 +219,32 @@ const SalesList: React.FC = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
+              Data Inicial
+            </label>
+            <input
+              type="date"
+              value={localFilters.minDate || ''}
+              onChange={(e) => handleFilterChange('minDate', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Data Final
+            </label>
+            <input
+              type="date"
+              value={localFilters.maxDate || ''}
+              onChange={(e) => handleFilterChange('maxDate', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Itens por página
             </label>
             <select
-              value={filters.size || 10}
+              value={localFilters.size || 10}
               onChange={(e) => handleFilterChange('size', parseInt(e.target.value))}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -169,6 +253,48 @@ const SalesList: React.FC = () => {
               <option value={20}>20</option>
               <option value={50}>50</option>
             </select>
+          </div>
+        </div>
+        
+        {/* Additional filters row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Valor Mínimo
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={localFilters.minTotalAmount || ''}
+              onChange={(e) => handleAmountFilterChange('minTotalAmount', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="0.00"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Valor Máximo
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={localFilters.maxTotalAmount || ''}
+              onChange={(e) => handleAmountFilterChange('maxTotalAmount', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="999999.99"
+            />
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={() => {
+                const resetFilters = { page: 1, size: 10 };
+                setLocalFilters(resetFilters);
+                setSearchFilters(resetFilters);
+              }}
+              className="w-full px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            >
+              Limpar Filtros
+            </button>
           </div>
         </div>
       </div>
@@ -243,24 +369,24 @@ const SalesList: React.FC = () => {
       {totalPages > 1 && (
         <div className="mt-8 flex items-center justify-between">
           <div className="text-sm text-gray-700">
-            Mostrando {((currentPage - 1) * (filters.size || 10)) + 1} a{' '}
-            {Math.min(currentPage * (filters.size || 10), totalCount)} de {totalCount} resultados
+            Mostrando {(((searchFilters.page || 1) - 1) * (searchFilters.size || 10)) + 1} a{' '}
+            {Math.min((searchFilters.page || 1) * (searchFilters.size || 10), totalCount)} de {totalCount} resultados
           </div>
           <div className="flex items-center space-x-2">
             <button
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
+              onClick={() => handlePageChange((searchFilters.page || 1) - 1)}
+              disabled={(searchFilters.page || 1) === 1}
               className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="h-4 w-4" />
               Anterior
             </button>
             <span className="text-sm text-gray-700">
-              Página {currentPage} de {totalPages}
+              Página {searchFilters.page || 1} de {totalPages}
             </span>
             <button
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
+              onClick={() => handlePageChange((searchFilters.page || 1) + 1)}
+              disabled={(searchFilters.page || 1) === totalPages}
               className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Próxima
