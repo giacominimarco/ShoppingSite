@@ -57,15 +57,11 @@ export interface GetSalesRequest {
 }
 
 export interface GetSalesResponse {
-  success: boolean;
-  data: {
-    sales: Sale[];           // Mudou de "items" para "sales"
-    totalCount: number;
-    page: number;
-    size: number;
-    totalPages: number;
-  };
-  message?: string;
+  sales: Sale[];
+  totalCount: number;
+  page: number;
+  size: number;
+  totalPages: number;
 }
 
 export interface CancelSaleResponse {

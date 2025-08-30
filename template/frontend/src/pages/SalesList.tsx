@@ -25,14 +25,14 @@ const SalesList: React.FC = () => {
       
       const response = await salesApi.getSales(filters);
       console.log('📡 Resposta completa da API:', response);
-      console.log('📊 Dados da resposta:', response.data);
+      console.log('📊 Dados da resposta:', response);
       console.log('🔍 Estrutura completa:', JSON.stringify(response, null, 2));
       
-      setSales(response.data.sales || []);
-      setTotalPages(response.data.totalPages || 1);
-      setTotalCount(response.data.totalCount || 0);
+      setSales(response.sales || []);
+      setTotalPages(response.totalPages || 1);
+      setTotalCount(response.totalCount || 0);
       
-      console.log('✅ Vendas carregadas:', response.data.sales?.length || 0);
+      console.log('✅ Vendas carregadas:', response.sales?.length || 0);
     } catch (err: any) {
       console.error('❌ Erro ao carregar vendas:', err);
       console.error('❌ Detalhes do erro:', err.response?.data || err.message);
