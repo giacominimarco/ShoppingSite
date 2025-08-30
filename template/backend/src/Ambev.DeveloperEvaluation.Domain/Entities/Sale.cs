@@ -116,7 +116,8 @@ public class Sale : BaseEntity
     /// Cancels a specific item in the sale.
     /// </summary>
     /// <param name="itemId">The ID of the item to cancel</param>
-    public void CancelItem(Guid itemId)
+    /// <returns>True if the sale was automatically cancelled (no more items), false otherwise</returns>
+    public bool CancelItem(Guid itemId)
     {
         var item = Items.FirstOrDefault(i => i.Id == itemId);
         if (item == null)
@@ -125,6 +126,15 @@ public class Sale : BaseEntity
         Items.Remove(item);
         RecalculateTotal();
         UpdatedAt = DateTime.UtcNow;
+
+        // Se não há mais itens, cancelar a venda automaticamente
+        if (Items.Count == 0)
+        {
+            Cancel();
+            return true; // Venda foi cancelada automaticamente
+        }
+
+        return false; // Venda permanece ativa
     }
 
     /// <summary>

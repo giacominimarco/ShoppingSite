@@ -73,6 +73,17 @@ export interface CancelSaleResponse {
   message?: string;
 }
 
+export interface CancelItemResponse {
+  success: boolean;
+  data: {
+    sale: Sale;
+    cancelledItemId: string;
+    message: string;
+    wasAutomaticallyCancelled: boolean;
+  };
+  message?: string;
+}
+
 export interface ApiError {
   success: false;
   message: string;

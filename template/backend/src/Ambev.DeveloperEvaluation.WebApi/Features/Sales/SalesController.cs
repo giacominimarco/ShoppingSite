@@ -6,10 +6,12 @@ using Ambev.DeveloperEvaluation.WebApi.Features.Sales.CreateSale;
 using Ambev.DeveloperEvaluation.WebApi.Features.Sales.GetSale;
 using Ambev.DeveloperEvaluation.WebApi.Features.Sales.GetSales;
 using Ambev.DeveloperEvaluation.WebApi.Features.Sales.CancelSale;
+using Ambev.DeveloperEvaluation.WebApi.Features.Sales.CancelItem;
 using Ambev.DeveloperEvaluation.Application.Sales.CreateSale;
 using Ambev.DeveloperEvaluation.Application.Sales.GetSale;
 using Ambev.DeveloperEvaluation.Application.Sales.GetSales;
 using Ambev.DeveloperEvaluation.Application.Sales.CancelSale;
+using Ambev.DeveloperEvaluation.Application.Sales.CancelItem;
 
 namespace Ambev.DeveloperEvaluation.WebApi.Features.Sales;
 
@@ -147,6 +149,41 @@ public class SalesController : BaseController
             Success = true,
             Message = "Sale cancelled successfully",
             Data = _mapper.Map<CancelSaleResponse>(response)
+        });
+    }
+
+    /// <summary>
+    /// Cancels a specific item in a sale by its ID.
+    /// </summary>
+    /// <param name="saleId">The unique identifier of the sale</param>
+    /// <param name="itemId">The unique identifier of the item to cancel</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Success response if the item was cancelled</returns>
+    [HttpPost("{saleId}/items/{itemId}/cancel")]
+    [ProducesResponseType(typeof(ApiResponseWithData<CancelItemResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> CancelItem([FromRoute] Guid saleId, [FromRoute] Guid itemId, CancellationToken cancellationToken)
+    {
+        var request = new CancelItemRequest { SaleId = saleId, ItemId = itemId };
+        var validator = new CancelItemRequestValidator();
+        var validationResult = await validator.ValidateAsync(request, cancellationToken);
+
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors);
+
+        var command = _mapper.Map<CancelItemCommand>(request);
+        var response = await _mediator.Send(command, cancellationToken);
+
+        var responseData = _mapper.Map<CancelItemResponse>(response);
+        
+        return base.Ok(new ApiResponseWithData<CancelItemResponse>
+        {
+            Success = true,
+            Message = responseData.WasAutomaticallyCancelled 
+                ? "Item cancelled successfully. Sale was automatically cancelled as it had no more items." 
+                : "Item cancelled successfully",
+            Data = responseData
         });
     }
 }

@@ -88,21 +88,44 @@ public class SaleService : ISaleService
     /// <param name="saleId">The sale ID</param>
     /// <param name="itemId">The item ID to cancel</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>The updated sale</returns>
-    public async Task<Sale> CancelItemAsync(Guid saleId, Guid itemId, CancellationToken cancellationToken = default)
+    /// <returns>The updated sale and information about whether it was automatically cancelled</returns>
+    public async Task<(Sale Sale, bool WasAutomaticallyCancelled)> CancelItemAsync(Guid saleId, Guid itemId, CancellationToken cancellationToken = default)
     {
         var sale = await _saleRepository.GetByIdAsync(saleId, cancellationToken);
         if (sale == null)
             throw new InvalidOperationException($"Sale with ID {saleId} not found");
 
-        sale.CancelItem(itemId);
+        bool wasAutomaticallyCancelled = false;
+
+        try
+        {
+            wasAutomaticallyCancelled = sale.CancelItem(itemId);
+        }
+        catch (InvalidOperationException ex) when (ex.Message.Contains("Item not found"))
+        {
+            // Verificar se o item realmente existe na venda
+            var itemExists = sale.Items.Any(i => i.Id == itemId);
+            if (!itemExists)
+            {
+                throw new InvalidOperationException($"Item with ID {itemId} not found in sale {saleId}. Available items: {string.Join(", ", sale.Items.Select(i => $"{i.Product} (ID: {i.Id})"))}");
+            }
+            throw; // Re-throw se for outro tipo de erro
+        }
+
         var updatedSale = await _saleRepository.UpdateAsync(sale, cancellationToken);
 
         // Publish event
         var itemCancelledEvent = new ItemCancelledEvent(updatedSale, itemId);
         LogSaleEvent(itemCancelledEvent);
 
-        return updatedSale;
+        // Se a venda foi cancelada automaticamente, publicar evento de cancelamento
+        if (wasAutomaticallyCancelled)
+        {
+            var saleCancelledEvent = new SaleCancelledEvent(updatedSale);
+            LogSaleEvent(saleCancelledEvent);
+        }
+
+        return (updatedSale, wasAutomaticallyCancelled);
     }
 
     /// <summary>
