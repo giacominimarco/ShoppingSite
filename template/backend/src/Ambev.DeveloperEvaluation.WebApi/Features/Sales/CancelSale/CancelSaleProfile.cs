@@ -13,6 +13,8 @@ public class CancelSaleProfile : Profile
     /// </summary>
     public CancelSaleProfile()
     {
+        CreateMap<Guid, CancelSaleCommand>()
+            .ConstructUsing(id => new CancelSaleCommand(id));
         CreateMap<CancelSaleRequest, CancelSaleCommand>()
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id));
         CreateMap<CancelSaleResult, CancelSaleResponse>();
