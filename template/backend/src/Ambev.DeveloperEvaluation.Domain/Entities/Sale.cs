@@ -93,7 +93,8 @@ public class Sale : BaseEntity
             Quantity = quantity,
             UnitPrice = unitPrice,
             Discount = calculatedDiscount,
-            TotalAmount = CalculateItemTotal(quantity, unitPrice, calculatedDiscount)
+            TotalAmount = CalculateItemTotal(quantity, unitPrice, calculatedDiscount),
+            Status = SaleItemStatus.Active
         };
 
         Items.Add(item);
@@ -123,12 +124,13 @@ public class Sale : BaseEntity
         if (item == null)
             throw new InvalidOperationException("Item not found in sale");
 
-        Items.Remove(item);
+        // Marcar item como removido em vez de remover fisicamente
+        item.Status = SaleItemStatus.Removed;
         RecalculateTotal();
         UpdatedAt = DateTime.UtcNow;
 
-        // Se não há mais itens, cancelar a venda automaticamente
-        if (Items.Count == 0)
+        // Se não há mais itens ativos, cancelar a venda automaticamente
+        if (GetActiveItemsCount() == 0)
         {
             Cancel();
             return true; // Venda foi cancelada automaticamente
@@ -140,9 +142,9 @@ public class Sale : BaseEntity
     /// <summary>
     /// Recalculates the total amount of the sale based on all items.
     /// </summary>
-    private void RecalculateTotal()
+    public void RecalculateTotal()
     {
-        TotalAmount = Items.Sum(item => item.TotalAmount);
+        TotalAmount = Items.Where(item => item.Status == SaleItemStatus.Active).Sum(item => item.TotalAmount);
     }
 
     /// <summary>
@@ -180,7 +182,31 @@ public class Sale : BaseEntity
     /// <returns>A unique sale number</returns>
     private string GenerateSaleNumber()
     {
-        return $"SALE-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper()}";
+        var guid = Guid.NewGuid();
+        var guidString = guid.ToString("N");
+        if (guidString.Length >= 8)
+        {
+            return $"SALE-{DateTime.UtcNow:yyyyMMdd}-{guidString.Substring(0, 8).ToUpper()}";
+        }
+        return $"SALE-{DateTime.UtcNow:yyyyMMdd}-{guidString.ToUpper()}";
+    }
+
+    /// <summary>
+    /// Gets the count of active items in the sale.
+    /// </summary>
+    /// <returns>The count of active items</returns>
+    public int GetActiveItemsCount()
+    {
+        return Items.Count(item => item.Status == SaleItemStatus.Active);
+    }
+
+    /// <summary>
+    /// Gets the count of removed items in the sale.
+    /// </summary>
+    /// <returns>The count of removed items</returns>
+    public int GetRemovedItemsCount()
+    {
+        return Items.Count(item => item.Status == SaleItemStatus.Removed);
     }
 
     /// <summary>

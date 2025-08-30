@@ -9,6 +9,7 @@ const SaleDetail: React.FC = () => {
   const [sale, setSale] = useState<Sale | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cancellingItems, setCancellingItems] = useState<Set<string>>(new Set());
 
   const loadSale = useCallback(async () => {
     try {
@@ -23,6 +24,15 @@ const SaleDetail: React.FC = () => {
       if (response && typeof response === 'object') {
         // Se a resposta tem a propriedade 'data', use-a; caso contrário, use a resposta diretamente
         const saleData = (response as any).data || response;
+        console.log('Sale data:', saleData);
+        console.log('Sale status:', saleData.status);
+        console.log('Sale items:', saleData.items);
+        if (saleData.items) {
+          saleData.items.forEach((item: any, index: number) => {
+            console.log(`Item ${index}:`, item);
+            console.log(`Item ${index} status:`, item.status);
+          });
+        }
         setSale(saleData);
       } else {
         console.error('❌ Resposta da API inválida:', response);
@@ -62,8 +72,10 @@ const SaleDetail: React.FC = () => {
     }
 
     try {
+      // Adicionar item ao conjunto de itens sendo cancelados
+      setCancellingItems(prev => new Set(prev).add(itemId));
+      
       const response = await salesApi.cancelSaleItem(sale.id, itemId);
-      await loadSale(); // Recarregar os dados da venda
       
       // Mostrar mensagem informativa
       if (response.data.wasAutomaticallyCancelled) {
@@ -71,8 +83,18 @@ const SaleDetail: React.FC = () => {
       } else {
         alert(`Item "${productName}" cancelado com sucesso!`);
       }
+      
+      // Recarregar os dados da venda para atualizar o status
+      await loadSale();
     } catch (err: any) {
       alert(err.message || 'Erro ao cancelar item');
+    } finally {
+      // Remover item do conjunto de itens sendo cancelados
+      setCancellingItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(itemId);
+        return newSet;
+      });
     }
   };
 
@@ -221,7 +243,14 @@ const SaleDetail: React.FC = () => {
           <dl className="space-y-3">
             <div>
               <dt className="text-sm font-medium text-gray-500">Total de Itens</dt>
-              <dd className="text-sm text-gray-900">{sale.items?.length || 0}</dd>
+                             <dd className="text-sm text-gray-900">
+                 {sale.items?.filter(item => item.status === 1).length || 0} ativos
+                 {sale.items?.filter(item => item.status === 2).length > 0 && (
+                   <span className="text-gray-500 ml-2">
+                     / {sale.items?.filter(item => item.status === 2).length} cancelados
+                   </span>
+                 )}
+               </dd>
             </div>
             <div>
               <dt className="text-sm font-medium text-gray-500">Valor Total</dt>
@@ -242,7 +271,15 @@ const SaleDetail: React.FC = () => {
       {/* Items List */}
       <div className="bg-white rounded-lg shadow border">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Itens da Venda</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900">Itens da Venda</h2>
+                         {sale.items?.some(item => item.status === 2) && (
+               <div className="flex items-center text-sm text-gray-600">
+                 <div className="w-2 h-2 bg-red-400 rounded-full mr-2"></div>
+                 Itens cancelados são exibidos com fundo cinza e riscados
+               </div>
+             )}
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -264,45 +301,126 @@ const SaleDetail: React.FC = () => {
                   Total
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Ações
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {sale.items && sale.items.length > 0 ? (
-                sale.items.map((item) => (
-                  <tr key={item.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {item.product}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {item.quantity}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatCurrency(item.unitPrice)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {item.discount > 0 ? formatCurrency(item.discount) : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {formatCurrency(item.totalAmount)}
-                    </td>
-                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                       {sale.status === 'Active' && (
-                         <button
-                           onClick={() => handleCancelItem(item.id, item.product)}
-                           className="inline-flex items-center px-2 py-1 border border-red-300 shadow-sm text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
-                         >
-                           <X className="h-3 w-3 mr-1" />
-                           Cancelar
-                         </button>
-                       )}
-                     </td>
-                  </tr>
-                ))
+                sale.items.map((item) => {
+                                     // Converter o status numérico para string
+                   const itemStatus = item.status === 1 ? 'Active' : item.status === 2 ? 'Removed' : 'Active';
+                   const isItemCancelled = itemStatus === 'Removed';
+                   const isItemBeingCancelled = cancellingItems.has(item.id);
+                   console.log('Rendering item:', item.product, 'Status:', item.status, 'ItemStatus:', itemStatus, 'IsCancelled:', isItemCancelled, 'IsBeingCancelled:', isItemBeingCancelled);
+                   
+                   // Aplicar classes CSS baseadas no estado
+                   let rowClass = '';
+                   if (item.status === 2) {
+                     rowClass = 'bg-gray-50 opacity-60';
+                   } else if (isItemBeingCancelled) {
+                     rowClass = 'bg-yellow-50 border-l-4 border-l-yellow-400';
+                   }
+                   console.log(`Item ${item.product}: rowClass="${rowClass}"`);
+                  return (
+                    <tr 
+                      key={item.id} 
+                      className={rowClass}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <div className="flex items-center">
+                                                     {(() => {
+                             const showIcon = item.status === 2;
+                             console.log(`Item ${item.product}: showIcon=${showIcon}`);
+                             return showIcon ? <X className="h-4 w-4 text-red-500 mr-2" /> : null;
+                           })()}
+                           <span className={item.status === 2 ? 'line-through text-gray-500' : ''}>
+                             {item.product}
+                           </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {item.quantity}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatCurrency(item.unitPrice)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {item.discount > 0 ? formatCurrency(item.discount) : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {formatCurrency(item.totalAmount)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                 {(() => {
+                           let statusText, statusClass;
+                           
+                           if (isItemBeingCancelled) {
+                             statusText = 'Processando...';
+                             statusClass = 'bg-yellow-100 text-yellow-800';
+                           } else if (item.status === 1) {
+                             statusText = 'Ativo';
+                             statusClass = 'bg-green-100 text-green-800';
+                           } else {
+                             statusText = 'Cancelado';
+                             statusClass = 'bg-red-100 text-red-800';
+                           }
+                           
+                           console.log(`Item ${item.product}: status=${item.status}, itemStatus=${itemStatus}, isBeingCancelled=${isItemBeingCancelled}, statusText=${statusText}`);
+                           return (
+                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}`}>
+                               {isItemBeingCancelled && (
+                                 <div className="animate-spin rounded-full h-2 w-2 border-b-2 border-yellow-600 mr-1"></div>
+                               )}
+                               {statusText}
+                             </span>
+                           );
+                         })()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {(() => {
+                                                     const shouldShowButton = sale.status === 'Active' && item.status === 1;
+                           console.log(`Item ${item.product}: sale.status=${sale.status}, item.status=${item.status}, itemStatus=${itemStatus}, shouldShowButton=${shouldShowButton}`);
+                                                     const isCancelling = cancellingItems.has(item.id);
+                           return shouldShowButton ? (
+                             <button
+                               onClick={() => handleCancelItem(item.id, item.product)}
+                               disabled={isCancelling}
+                               className={`inline-flex items-center px-2 py-1 border text-xs font-medium rounded focus:outline-none focus:ring-2 focus:ring-red-500 transition-all duration-200 ${
+                                 isCancelling
+                                   ? 'border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed opacity-50'
+                                   : 'border-red-300 text-red-700 bg-white hover:bg-red-50 hover:border-red-400'
+                               }`}
+                             >
+                               {isCancelling ? (
+                                 <>
+                                   <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400 mr-1"></div>
+                                   Cancelando...
+                                 </>
+                               ) : (
+                                 <>
+                                   <X className="h-3 w-3 mr-1" />
+                                   Cancelar
+                                 </>
+                               )}
+                             </button>
+                           ) : null;
+                        })()}
+                                                 {item.status === 2 && (
+                           <span className="text-xs text-gray-500 italic">
+                             Item cancelado
+                           </span>
+                         )}
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                  <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
                     Nenhum item encontrado para esta venda
                   </td>
                 </tr>

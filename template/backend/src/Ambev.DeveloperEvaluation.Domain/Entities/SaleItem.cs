@@ -1,4 +1,5 @@
 using Ambev.DeveloperEvaluation.Domain.Common;
+using Ambev.DeveloperEvaluation.Domain.Enums;
 
 namespace Ambev.DeveloperEvaluation.Domain.Entities;
 
@@ -38,6 +39,11 @@ public class SaleItem : BaseEntity
     public decimal TotalAmount { get; set; }
 
     /// <summary>
+    /// Gets the current status of the sale item.
+    /// </summary>
+    public SaleItemStatus Status { get; set; }
+
+    /// <summary>
     /// Gets the navigation property to the parent sale.
     /// </summary>
     public Sale Sale { get; set; } = null!;
@@ -47,6 +53,7 @@ public class SaleItem : BaseEntity
     /// </summary>
     public SaleItem()
     {
+        Status = SaleItemStatus.Active;
     }
 
     /// <summary>
@@ -66,5 +73,6 @@ public class SaleItem : BaseEntity
         UnitPrice = unitPrice;
         Discount = discount;
         TotalAmount = totalAmount;
+        Status = SaleItemStatus.Active;
     }
 }

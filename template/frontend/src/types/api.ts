@@ -6,6 +6,7 @@ export interface SaleItem {
   unitPrice: number;
   discount: number;
   totalAmount: number;
+  status: number; // 1 = Active, 2 = Removed
 }
 
 export interface Sale {

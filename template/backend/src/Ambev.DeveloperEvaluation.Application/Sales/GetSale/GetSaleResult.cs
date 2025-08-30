@@ -90,4 +90,9 @@ public class GetSaleItemResult
     /// Gets or sets the total amount for this item.
     /// </summary>
     public decimal TotalAmount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the item status (Active = 1, Removed = 2).
+    /// </summary>
+    public int Status { get; set; }
 }
