@@ -156,7 +156,7 @@ public class SaleTests
     }
 
     [Fact]
-    public void CancelItem_ShouldRemoveItemAndRecalculateTotal()
+    public void CancelItem_ShouldMarkItemAsRemovedAndRecalculateTotal()
     {
         // Arrange
         var sale = new Sale
@@ -168,13 +168,16 @@ public class SaleTests
         sale.AddItem("Wine", 3, 20.00m);
         
         var itemToCancel = sale.Items.First();
+        var initialTotal = sale.TotalAmount;
 
         // Act
         sale.CancelItem(itemToCancel.Id);
 
         // Assert
-        Assert.Single(sale.Items);
-        Assert.Equal(60.00m, sale.TotalAmount); // Only wine item remains
+        Assert.Equal(2, sale.Items.Count); // Item ainda está na lista
+        Assert.Equal(SaleItemStatus.Removed, itemToCancel.Status); // Mas marcado como removido
+        Assert.Equal(60.00m, sale.TotalAmount); // Total recalculado sem o item removido
+        Assert.True(sale.TotalAmount < initialTotal); // Total diminuiu
     }
 
     [Fact]
@@ -231,5 +234,129 @@ public class SaleTests
         // Assert
         Assert.False(result.IsValid);
         Assert.NotEmpty(result.Errors);
+    }
+
+    [Fact]
+    public void CancelItem_ShouldSetItemStatusToRemoved()
+    {
+        // Arrange
+        var sale = new Sale
+        {
+            Customer = "John Doe",
+            Branch = "Downtown Store"
+        };
+        sale.AddItem("Beer", 5, 10.00m);
+        sale.AddItem("Wine", 3, 20.00m); // Adicionar segundo item para testar
+        var itemToCancel = sale.Items.First();
+
+        // Act
+        sale.CancelItem(itemToCancel.Id);
+
+        // Assert
+        Assert.Equal(SaleItemStatus.Removed, itemToCancel.Status);
+        Assert.Equal(SaleItemStatus.Active, sale.Items.Last().Status); // Outros itens permanecem ativos
+    }
+
+    [Fact]
+    public void CancelItem_WhenLastActiveItem_ShouldAutomaticallyCancelSale()
+    {
+        // Arrange
+        var sale = new Sale
+        {
+            Customer = "John Doe",
+            Branch = "Downtown Store"
+        };
+        sale.AddItem("Beer", 5, 10.00m); // Apenas um item
+
+        // Act
+        sale.CancelItem(sale.Items.First().Id);
+
+        // Assert
+        Assert.Equal(SaleStatus.Cancelled, sale.Status);
+        Assert.NotNull(sale.UpdatedAt);
+    }
+
+    [Fact]
+    public void CancelItem_WhenMultipleItemsExist_ShouldNotCancelSale()
+    {
+        // Arrange
+        var sale = new Sale
+        {
+            Customer = "John Doe",
+            Branch = "Downtown Store"
+        };
+        sale.AddItem("Beer", 5, 10.00m);
+        sale.AddItem("Wine", 3, 20.00m);
+
+        // Act
+        sale.CancelItem(sale.Items.First().Id);
+
+        // Assert
+        Assert.Equal(SaleStatus.Active, sale.Status);
+        Assert.Equal(1, sale.GetActiveItemsCount());
+        Assert.Equal(1, sale.GetRemovedItemsCount());
+    }
+
+    [Fact]
+    public void GetActiveItemsCount_ShouldReturnOnlyActiveItems()
+    {
+        // Arrange
+        var sale = new Sale
+        {
+            Customer = "John Doe",
+            Branch = "Downtown Store"
+        };
+        sale.AddItem("Beer", 5, 10.00m);
+        sale.AddItem("Wine", 3, 20.00m);
+        sale.CancelItem(sale.Items.First().Id);
+
+        // Act
+        var activeCount = sale.GetActiveItemsCount();
+        var removedCount = sale.GetRemovedItemsCount();
+
+        // Assert
+        Assert.Equal(1, activeCount);
+        Assert.Equal(1, removedCount);
+        Assert.Equal(2, sale.Items.Count); // Total de itens permanece
+    }
+
+    [Fact]
+    public void RecalculateTotal_ShouldOnlySumActiveItems()
+    {
+        // Arrange
+        var sale = new Sale
+        {
+            Customer = "John Doe",
+            Branch = "Downtown Store"
+        };
+        sale.AddItem("Beer", 5, 10.00m); // 45.00 (com desconto)
+        sale.AddItem("Wine", 3, 20.00m); // 60.00 (sem desconto)
+        var initialTotal = sale.TotalAmount; // 105.00
+
+        // Act
+        sale.CancelItem(sale.Items.First().Id); // Remove Beer (45.00)
+        sale.RecalculateTotal();
+
+        // Assert
+        Assert.Equal(60.00m, sale.TotalAmount); // Apenas Wine
+        Assert.True(sale.TotalAmount < initialTotal);
+    }
+
+    [Fact]
+    public void AddItem_ShouldSetStatusToActive()
+    {
+        // Arrange
+        var sale = new Sale
+        {
+            Customer = "John Doe",
+            Branch = "Downtown Store"
+        };
+
+        // Act
+        sale.AddItem("Beer", 5, 10.00m);
+
+        // Assert
+        var item = sale.Items.First();
+        Assert.Equal(SaleItemStatus.Active, item.Status);
     }
 }
