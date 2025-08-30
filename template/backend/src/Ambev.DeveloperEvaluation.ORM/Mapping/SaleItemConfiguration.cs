@@ -42,6 +42,10 @@ public class SaleItemConfiguration : IEntityTypeConfiguration<SaleItem>
             .HasColumnType("decimal(18,2)")
             .IsRequired();
 
+        builder.Property(i => i.Status)
+            .HasColumnType("integer")
+            .IsRequired();
+
         // Configure the foreign key relationship
         builder.HasOne(i => i.Sale)
             .WithMany(s => s.Items)
