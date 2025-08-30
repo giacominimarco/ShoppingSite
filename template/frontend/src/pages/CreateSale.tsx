@@ -150,7 +150,7 @@ const CreateSale: React.FC = () => {
        console.log('Sale created successfully:', response);
        
        alert('Venda criada com sucesso!');
-       navigate(`/sales/${response.id}`);
+       navigate('/sales');
     } catch (err: any) {
       console.error('Error creating sale:', err);
       setError(err.message || 'Erro ao criar venda');

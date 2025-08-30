@@ -55,6 +55,27 @@ const SaleDetail: React.FC = () => {
     }
   };
 
+  // Função para cancelar um item específico
+  const handleCancelItem = async (itemId: string, productName: string) => {
+    if (!sale || !window.confirm(`Tem certeza que deseja cancelar o item "${productName}"?`)) {
+      return;
+    }
+
+    try {
+      const response = await salesApi.cancelSaleItem(sale.id, itemId);
+      await loadSale(); // Recarregar os dados da venda
+      
+      // Mostrar mensagem informativa
+      if (response.data.wasAutomaticallyCancelled) {
+        alert(`Item "${productName}" cancelado com sucesso!\n\nA venda foi automaticamente cancelada por não ter mais itens.`);
+      } else {
+        alert(`Item "${productName}" cancelado com sucesso!`);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Erro ao cancelar item');
+    }
+  };
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -242,6 +263,9 @@ const SaleDetail: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Total
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Ações
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -263,11 +287,22 @@ const SaleDetail: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {formatCurrency(item.totalAmount)}
                     </td>
+                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                       {sale.status === 'Active' && (
+                         <button
+                           onClick={() => handleCancelItem(item.id, item.product)}
+                           className="inline-flex items-center px-2 py-1 border border-red-300 shadow-sm text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500"
+                         >
+                           <X className="h-3 w-3 mr-1" />
+                           Cancelar
+                         </button>
+                       )}
+                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
+                  <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
                     Nenhum item encontrado para esta venda
                   </td>
                 </tr>

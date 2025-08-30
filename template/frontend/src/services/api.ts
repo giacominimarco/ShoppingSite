@@ -4,13 +4,14 @@ import {
   GetSalesRequest,
   GetSalesResponse,
   Sale,
+  CancelItemResponse,
 } from '../types/api';
 
 // Detecta o protocolo atual e define a porta correta do backend
 const protocol = window.location.protocol; // 'http:' ou 'https:'
 const port = protocol === 'https:' ? 7181 : 5119;
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || `${protocol}//localhost:${port}/api`;
+const API_BASE_URL = process.env.REACT_APP_API_URL || `${protocol}//localhost:${port}`;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -55,6 +56,12 @@ export const salesApi = {
   // Cancelar uma venda
   cancelSale: async (id: string): Promise<Sale> => {
     const response: AxiosResponse<Sale> = await api.post(`/sales/${id}/cancel`);
+    return response.data;
+  },
+
+  // Cancelar um item específico de uma venda
+  cancelSaleItem: async (saleId: string, itemId: string): Promise<CancelItemResponse> => {
+    const response: AxiosResponse<CancelItemResponse> = await api.post(`/sales/${saleId}/items/${itemId}/cancel`);
     return response.data;
   },
 };

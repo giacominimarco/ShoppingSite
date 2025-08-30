@@ -31,8 +31,8 @@ public interface ISaleService
     /// <param name="saleId">The sale ID</param>
     /// <param name="itemId">The item ID to cancel</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>The updated sale</returns>
-    Task<Sale> CancelItemAsync(Guid saleId, Guid itemId, CancellationToken cancellationToken = default);
+    /// <returns>The updated sale and information about whether it was automatically cancelled</returns>
+    Task<(Sale Sale, bool WasAutomaticallyCancelled)> CancelItemAsync(Guid saleId, Guid itemId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
