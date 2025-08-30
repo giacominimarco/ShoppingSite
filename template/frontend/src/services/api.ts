@@ -1,11 +1,9 @@
 import axios, { AxiosResponse } from 'axios';
 import {
   CreateSaleRequest,
-  CreateSaleResponse,
-  GetSaleResponse,
   GetSalesRequest,
   GetSalesResponse,
-  CancelSaleResponse,
+  Sale,
 } from '../types/api';
 
 // Detecta o protocolo atual e define a porta correta do backend
@@ -37,14 +35,14 @@ api.interceptors.response.use(
 
 export const salesApi = {
   // Criar uma nova venda
-  createSale: async (saleData: CreateSaleRequest): Promise<CreateSaleResponse> => {
-    const response: AxiosResponse<CreateSaleResponse> = await api.post('/sales', saleData);
+  createSale: async (saleData: CreateSaleRequest): Promise<Sale> => {
+    const response: AxiosResponse<Sale> = await api.post('/sales', saleData);
     return response.data;
   },
 
   // Obter uma venda específica
-  getSale: async (id: string): Promise<GetSaleResponse> => {
-    const response: AxiosResponse<GetSaleResponse> = await api.get(`/sales/${id}`);
+  getSale: async (id: string): Promise<Sale> => {
+    const response: AxiosResponse<Sale> = await api.get(`/sales/${id}`);
     return response.data;
   },
 
@@ -55,8 +53,8 @@ export const salesApi = {
   },
 
   // Cancelar uma venda
-  cancelSale: async (id: string): Promise<CancelSaleResponse> => {
-    const response: AxiosResponse<CancelSaleResponse> = await api.post(`/sales/${id}/cancel`);
+  cancelSale: async (id: string): Promise<Sale> => {
+    const response: AxiosResponse<Sale> = await api.post(`/sales/${id}/cancel`);
     return response.data;
   },
 };
